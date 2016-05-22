@@ -16,8 +16,8 @@ $(document).ready(function () {
   let pivot
 
   function resize() {
-    drawing.width = window.innerWidth;
-    drawing.height = window.innerHeight;
+    drawing.width = window.innerWidth
+    drawing.height = window.innerHeight
 
     rodWidth = drawing.width * 0.9
     rodHeight = drawing.width * 0.05
@@ -39,7 +39,9 @@ $(document).ready(function () {
   let mousePosition = 0
   let speed = 0
 
-  let boxes = [0, 0]
+  let boxes = [-1, -1]
+
+  let state = { value: 0, version: 0 }
 
   function update(position) {
     mousePosition = position
@@ -52,13 +54,17 @@ $(document).ready(function () {
            : mousePosition)
 
     boxes[0] = x
-    boxes[1] = pivot + 200
+    boxes[1] = -1//pivot + 200
 
     let center = 0
+    let count = 0
     for (let i = 0; i < boxes.length; ++i) {
-      center += boxes[i]
+      if (boxes[i] >= 0) {
+        center += boxes[i]
+        ++ count
+      }
     }
-    center /= boxes.length
+    center /= count
 
     target = center === pivot ? 0 : (center > pivot ? 10 : -10)
 
@@ -73,9 +79,14 @@ $(document).ready(function () {
     if (useFirebase) {
       firebase.database().ref('position').set(mousePosition / drawing.width)
     } else {
-      $.ajax({ url: 'http://localhost:8080/',
+      console.log("post " + (mousePosition / drawing.width))
+
+      state = { value: mousePosition / drawing.width,
+                version: ++ state.version }
+
+      $.ajax({ url: 'http://concelo.io:8080/',
                type: 'POST',
-               data: (mousePosition / drawing.width).toString() })
+               data: JSON.stringify(state) })
     }
   })
 
@@ -89,23 +100,32 @@ $(document).ready(function () {
         update(drawing.width * data.val())
       })
     } else {
-      $.ajax({ url: 'http://localhost:8080/' }).done(function(body) {
-        const value = parseFloat(body)
+      $.ajax({ url: 'http://concelo.io:8080/',
+               type: 'POST',
+               data: JSON.stringify({ version: state.version })
+             })
+        .done(function(body) {
+          console.log("get " + body)
 
-        update(drawing.width * value)
+          newState = JSON.parse(body)
 
-        setTimeout(get, 10)
-      })
+          if (newState.version > state.version) {
+            state = newState
+            update(drawing.width * state.value)
+          }
+
+          setTimeout(get, 10)
+        })
     }
   }
 
   const context = drawing.getContext("2d")
 
   function draw() {
-    context.clearRect(0, 0, drawing.width, drawing.height);
+    context.clearRect(0, 0, drawing.width, drawing.height)
 
-    context.lineWidth = 7;
-    context.strokeStyle = 'black';
+    context.lineWidth = 7
+    context.strokeStyle = 'black'
 
     // if (speed < 0 || speed > 1) throw new Error("oops")
 
@@ -119,31 +139,33 @@ $(document).ready(function () {
       }
     }
 
-    context.fillStyle = 'green';
+    context.fillStyle = 'green'
     context.beginPath()
-    context.moveTo(pivot, rodTop + (rodHeight/2));
-    context.lineTo(pivot + (triangleWidth/2), rodTop + (rodHeight/2) + triangleWidth);
-    context.lineTo(pivot - (triangleWidth/2), rodTop + (rodHeight/2) + triangleWidth);
-    context.lineTo(pivot, rodTop + (rodHeight/2));
-    context.fill();
-    context.stroke();
+    context.moveTo(pivot, rodTop + (rodHeight/2))
+    context.lineTo(pivot + (triangleWidth/2), rodTop + (rodHeight/2) + triangleWidth)
+    context.lineTo(pivot - (triangleWidth/2), rodTop + (rodHeight/2) + triangleWidth)
+    context.lineTo(pivot, rodTop + (rodHeight/2))
+    context.fill()
+    context.stroke()
 
     context.save()
     context.translate(pivot, rodTop + (rodHeight/2))
     context.rotate((Math.PI / 180) * rotation)
 
-    context.fillStyle = 'brown';
+    context.fillStyle = 'brown'
     context.beginPath()
-    context.rect(rodLeft - pivot, -(rodHeight/2), rodWidth, rodHeight);
-    context.fill();
-    context.stroke();
+    context.rect(rodLeft - pivot, -(rodHeight/2), rodWidth, rodHeight)
+    context.fill()
+    context.stroke()
 
+    context.fillStyle = 'yellow'
     for (let i = 0; i < boxes.length; ++i) {
-      context.fillStyle = 'yellow';
-      context.beginPath()
-      context.rect(boxes[i] - pivot - (boxHeight/2), -(boxHeight + (rodHeight/2)), boxWidth, boxHeight);
-      context.fill();
-      context.stroke()
+      if (boxes[i] >= 0) {
+        context.beginPath()
+        context.rect(boxes[i] - pivot - (boxHeight/2), -(boxHeight + (rodHeight/2)), boxWidth, boxHeight)
+        context.fill()
+        context.stroke()
+      }
     }
 
     context.restore()
