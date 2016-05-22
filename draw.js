@@ -37,11 +37,32 @@ $(document).ready(function () {
   let rotation = 0
   let target = 0
   let mousePosition = 0
+  let speed = 0
+
+  let boxes = [0, 0]
 
   function update(position) {
     mousePosition = position
 
-    target = mousePosition === pivot ? 0 : (mousePosition > pivot ? 10 : -10)
+    const limit = rodLeft + 10
+    let x = mousePosition < limit
+        ? limit
+        : (mousePosition > drawing.width - limit
+           ? drawing.width - limit
+           : mousePosition)
+
+    boxes[0] = x
+    boxes[1] = pivot + 200
+
+    let center = 0
+    for (let i = 0; i < boxes.length; ++i) {
+      center += boxes[i]
+    }
+    center /= boxes.length
+
+    target = center === pivot ? 0 : (center > pivot ? 10 : -10)
+
+    speed = (Math.abs(center - pivot) * 2) / rodWidth
 
     window.requestAnimationFrame(draw)
   }
@@ -86,15 +107,6 @@ $(document).ready(function () {
     context.lineWidth = 7;
     context.strokeStyle = 'black';
 
-    const limit = rodLeft + 10
-    let x = mousePosition < limit
-        ? limit
-        : (mousePosition > drawing.width - limit
-           ? drawing.width - limit
-           : mousePosition)
-
-    const speed = (Math.abs(x - pivot) * 2) / rodWidth
-
     // if (speed < 0 || speed > 1) throw new Error("oops")
 
     if (Math.abs(rotation - target) < speed) {
@@ -126,11 +138,13 @@ $(document).ready(function () {
     context.fill();
     context.stroke();
 
-    context.fillStyle = 'yellow';
-    context.beginPath()
-    context.rect(x - pivot - (boxHeight/2), -(boxHeight + (rodHeight/2)), boxWidth, boxHeight);
-    context.fill();
-    context.stroke();
+    for (let i = 0; i < boxes.length; ++i) {
+      context.fillStyle = 'yellow';
+      context.beginPath()
+      context.rect(boxes[i] - pivot - (boxHeight/2), -(boxHeight + (rodHeight/2)), boxWidth, boxHeight);
+      context.fill();
+      context.stroke()
+    }
 
     context.restore()
 
