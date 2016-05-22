@@ -109,7 +109,7 @@ $(document).ready(function () {
 
           newState = JSON.parse(body)
 
-          if (newState.version > state.version) {
+          if (newState.version !== state.version) {
             state = newState
             update(drawing.width * state.value)
           }

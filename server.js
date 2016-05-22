@@ -7,7 +7,7 @@ var state = { value: 0, version: 0 }
 var responses = []
 
 function handleRequest(request, response) {
-  response.setHeader('Access-Control-Allow-Origin', 'http://localhost:8070');
+  response.setHeader('Access-Control-Allow-Origin', 'http://concelo.io');
 
   if (request.method == 'POST') {
     var body = '';
