@@ -40,8 +40,24 @@ $(document).ready(function () {
 
     target = e.clientX === pivot ? 0 : (e.clientX > pivot ? 10 : -10)
 
+    firebase.database().ref('position').set(mousePosition / drawing.width)
+
     window.requestAnimationFrame(draw)
   })
+
+  firebase.auth().signInAnonymously().catch(function(error) {
+    console.log("auth error " + error.code + ": " + error.message)
+  });
+
+  firebase.database().ref('position').on('value', function(data) {
+    console.log("val: " + data.val())
+
+    mousePosition = drawing.width * data.val()
+
+    target = mousePosition === pivot ? 0 : (mousePosition > pivot ? 10 : -10)
+
+    window.requestAnimationFrame(draw)
+  });
 
   const context = drawing.getContext("2d")
 
