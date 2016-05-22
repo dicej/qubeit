@@ -1,4 +1,6 @@
 $(document).ready(function () {
+  const useFirebase = false
+
   const drawing = $("#drawing")[0]
 
   let rodWidth
@@ -35,29 +37,46 @@ $(document).ready(function () {
   let rotation = 0
   let target = 0
   let mousePosition = 0
-  drawing.addEventListener('mousemove', function(e) {
-    mousePosition = e.clientX
 
-    target = e.clientX === pivot ? 0 : (e.clientX > pivot ? 10 : -10)
-
-    firebase.database().ref('position').set(mousePosition / drawing.width)
-
-    window.requestAnimationFrame(draw)
-  })
-
-  firebase.auth().signInAnonymously().catch(function(error) {
-    console.log("auth error " + error.code + ": " + error.message)
-  });
-
-  firebase.database().ref('position').on('value', function(data) {
-    console.log("val: " + data.val())
-
-    mousePosition = drawing.width * data.val()
+  function update(position) {
+    mousePosition = position
 
     target = mousePosition === pivot ? 0 : (mousePosition > pivot ? 10 : -10)
 
     window.requestAnimationFrame(draw)
-  });
+  }
+
+  drawing.addEventListener('mousemove', function(e) {
+    update(e.clientX)
+
+    if (useFirebase) {
+      firebase.database().ref('position').set(mousePosition / drawing.width)
+    } else {
+      $.ajax({ url: 'http://localhost:8080/',
+               type: 'POST',
+               data: (mousePosition / drawing.width).toString() })
+    }
+  })
+
+  function get() {
+    if (useFirebase) {
+      firebase.auth().signInAnonymously().catch(function(error) {
+        console.log("auth error " + error.code + ": " + error.message)
+      })
+
+      firebase.database().ref('position').on('value', function(data) {
+        update(drawing.width * data.val())
+      })
+    } else {
+      $.ajax({ url: 'http://localhost:8080/' }).done(function(body) {
+        const value = parseFloat(body)
+
+        update(drawing.width * value)
+
+        setTimeout(get, 10)
+      })
+    }
+  }
 
   const context = drawing.getContext("2d")
 
@@ -75,8 +94,6 @@ $(document).ready(function () {
            : mousePosition)
 
     const speed = (Math.abs(x - pivot) * 2) / rodWidth
-
-    console.log("speed is " + speed)
 
     // if (speed < 0 || speed > 1) throw new Error("oops")
 
@@ -124,5 +141,7 @@ $(document).ready(function () {
     }
   }
 
-  resize();
+  resize()
+
+  get()
 })
